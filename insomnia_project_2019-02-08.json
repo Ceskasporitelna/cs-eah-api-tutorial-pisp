@@ -1,0 +1,302 @@
+{
+	"_type": "export",
+	"__export_format": 3,
+	"__export_date": "2019-02-08T13:18:31.529Z",
+	"__export_source": "insomnia.desktop.app:v6.3.2",
+	"resources": [
+		{
+			"_id": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"created": 1549629520615,
+			"description": "",
+			"modified": 1549629520615,
+			"name": "PISP tutorial",
+			"parentId": null,
+			"_type": "workspace"
+		},
+		{
+			"_id": "env_e8bf95da5f614b7c9ba0a114dae63993",
+			"color": null,
+			"created": 1549629520654,
+			"data": {},
+			"isPrivate": false,
+			"metaSortKey": 1549629520654,
+			"modified": 1549629520654,
+			"name": "New Environment",
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"_type": "environment"
+		},
+		{
+			"_id": "jar_6338813c7c0549e18fcabcc15600c47e",
+			"cookies": [],
+			"created": 1549629520657,
+			"modified": 1549629520657,
+			"name": "Default Jar",
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"_type": "cookie_jar"
+		},
+		{
+			"_id": "req_ac91f235f9f340a8a7bb8b5d1d4cce32",
+			"authentication": {},
+			"body": {},
+			"created": 1549629570414,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_cc1c2c765241477f8ee714a2c5264470",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570414,
+			"method": "GET",
+			"modified": 1549631717894,
+			"name": "getAccounts",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispAccounts",
+			"_type": "request"
+		},
+		{
+			"_id": "req_144e3e5fda4b40b2801ac86793c150ee",
+			"authentication": {},
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n  \"exchangeIdentification\": \"123456\",\n  \"debtorAccount\": {\n    \"identification\": {\n      \"iban\": \"CZ1208000000000259459101\"\n    }\n  },\n  \"transactionDetails\": {\n    \"currency\": \"CZK\",\n    \"totalAmount\": 10050.15\n  }\n}"
+			},
+			"created": 1549629946403,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_e535135023634b80a7500d6b1bd882c0",
+					"name": "Content-Type",
+					"value": "application/json"
+				},
+				{
+					"id": "pair_78bd459872a84f97a2e6a97f8b1afff5",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570364,
+			"method": "POST",
+			"modified": 1549631715028,
+			"name": "balanceCheck",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispBalanceCheck",
+			"_type": "request"
+		},
+		{
+			"_id": "req_f308b8b7ed884004ad9bbdb1231144d0",
+			"authentication": {},
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n  \"paymentTypeInformation\": {\n    \"instructionPriority\": \"NORM\"\n  },\n  \"amount\": {\n    \"instructedAmount\": {\n      \"value\": 10050.15,\n      \"currency\": \"CZK\"\n    }\n  },\n  \"requestedExecutionDate\": \"2019-12-20\",\n  \"debtorAccount\": {\n    \"identification\": {\n      \"iban\": \"CZ1208000000000259459101\"\n    }\n  },\n  \"creditorAccount\": {\n    \"identification\": {\n      \"iban\": \"CZ0708000000001019540081\"\n    }\n  }\n}"
+			},
+			"created": 1549630350194,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_16ca5433f47d44bea48437ba9744080e",
+					"name": "Content-Type",
+					"value": "application/json"
+				},
+				{
+					"id": "pair_b220d51d8d7d4501b7c333e6712f4400",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570314,
+			"method": "POST",
+			"modified": 1549631711847,
+			"name": "createPayment",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispCreatePayment",
+			"_type": "request"
+		},
+		{
+			"_id": "req_001a8f09b8ce461295a1a28e4f4b4ad5",
+			"authentication": {},
+			"body": {},
+			"created": 1549631337263,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_71f5a47d58a446e4b8f87cbe3059b415",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570264,
+			"method": "GET",
+			"modified": 1549631708428,
+			"name": "getApiAuthorization",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispApiAuth/166609107206666",
+			"_type": "request"
+		},
+		{
+			"_id": "req_0ccbd45372c84a7b9d20622cac87a4b2",
+			"authentication": {},
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n  \"authorizationType\": \"TAC\"\n}"
+			},
+			"created": 1549631385277,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_554f722f71b34b468fd3b37fb525616a",
+					"name": "Content-Type",
+					"value": "application/json"
+				},
+				{
+					"id": "pair_271fa439b62b47b3bd34ed5b1272998b",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570214,
+			"method": "POST",
+			"modified": 1549631705406,
+			"name": "startApiAuthorization",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispApiAuth/166609107206666",
+			"_type": "request"
+		},
+		{
+			"_id": "req_394fb98caa55470e8341abb1a6a0d47e",
+			"authentication": {},
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n  \"authorizationType\": \"TAC\",\n  \"oneTimePassword\": \"12345\"\n}"
+			},
+			"created": 1549631472355,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_9a6adcee15584547b52b54505e3ac07d",
+					"name": "Content-Type",
+					"value": "application/json"
+				},
+				{
+					"id": "pair_2561139e63ca4bc29fa8da0315808747",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570164,
+			"method": "PUT",
+			"modified": 1549631702229,
+			"name": "finishApiAuthorization",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispApiAuth/166609107206666",
+			"_type": "request"
+		},
+		{
+			"_id": "req_d3e279043d264ad6abfafeae26a8e3b7",
+			"authentication": {},
+			"body": {},
+			"created": 1549631530169,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_d9fbf5664a0749db8c83645ac586bd6f",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570114,
+			"method": "GET",
+			"modified": 1549631697093,
+			"name": "getFederatedAuthorization",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispFederatedAuth/166609107206666/hash/37b88d1e8ffa0258cdf617825ca460a46dbda8f6h2ed25a0d541485aec62c370",
+			"_type": "request"
+		},
+		{
+			"_id": "req_2aaefe8f6dc74bf5999c81a47ee0e379",
+			"authentication": {},
+			"body": {},
+			"created": 1549631673246,
+			"description": "",
+			"headers": [
+				{
+					"id": "pair_8a70d58ae72740e59a8d7fe3317b716e",
+					"name": "cache-control",
+					"value": "no-cache"
+				}
+			],
+			"isPrivate": false,
+			"metaSortKey": -1549629570064,
+			"method": "GET",
+			"modified": 1549631736451,
+			"name": "pollAuthorizationState",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/pispPollAuthorization/166609107206666",
+			"_type": "request"
+		}
+	]
+}
