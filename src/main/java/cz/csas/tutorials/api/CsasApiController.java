@@ -26,8 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.MalformedURLException;
 
 /**
- * Controller class, 3 methods for corporate API, 1 method for personal accounts API. All authorization calls are served
- * in authService.
+ * Controller class calls all PISP endpoints. All authorization calls are served in authService.
  */
 @RestController
 @Slf4j
