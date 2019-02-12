@@ -1,6 +1,6 @@
 package cz.csas.tutorials.api.services;
 
-import cz.csas.tutorials.api.model.ExpiredTokenException;
+import cz.csas.tutorials.api.model.ExpiredAccessTokenException;
 import cz.csas.tutorials.api.model.balance.BalanceCheckRequest;
 import cz.csas.tutorials.api.model.payments.CreatePaymentRequest;
 import cz.csas.tutorials.api.model.sign.FinishApiAuthorizationRequest;
@@ -13,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -39,12 +40,12 @@ public class PispService {
      * @param size      of page
      * @param sort      for results sorting
      * @param order     asc/desc
-     * @return accounts - JSON response in String form
-     * @throws ExpiredTokenException if access token is expired
+     * @return ResponseEntity with accounts in body
+     * @throws ExpiredAccessTokenException if access token is expired
      */
-    public String getAccounts(String token, String webApiKey, String page, String size, String sort, String order) throws ExpiredTokenException {
+    public ResponseEntity<Object> getAccounts(String token, String webApiKey, String page, String size, String sort, String order) throws ExpiredAccessTokenException {
         Map<String, String> uriParams = new HashMap<>();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getProperty("pispAccountsUrl"))
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispAccountsUrl"))
                 .queryParam("page", page)
                 .queryParam("size", size)
                 .queryParam("sort", sort)
@@ -55,113 +56,210 @@ public class PispService {
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
         HttpEntity<Object> entity = new HttpEntity<>(headers);
-        ResponseEntity<String> accounts = restTemplate.exchange(pispAccountsUrl, HttpMethod.GET, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(accounts.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        try {
+            return restTemplate.exchange(pispAccountsUrl, HttpMethod.GET, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return accounts.getBody();
     }
 
-    public String balanceCheck(String token, String webApiKey, BalanceCheckRequest request) throws ExpiredTokenException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getProperty("pispAccBalanceCheckUrl"));
+    /**
+     * Calls PISP balance check API
+     *
+     * @param token     access token
+     * @param webApiKey webapi key to connect to webapi
+     * @param request   containing mandatory fields for balance check
+     * @return ResponseEntity with balance check in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> balanceCheck(String token, String webApiKey, BalanceCheckRequest request) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispAccBalanceCheckUrl"));
         String pispAccBalanceCheckUrl = builder.build().toString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
         HttpEntity<BalanceCheckRequest> entity = new HttpEntity<>(request, headers);
-        ResponseEntity<String> balanceCheckResponse = restTemplate.exchange(pispAccBalanceCheckUrl, HttpMethod.POST, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(balanceCheckResponse.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        try {
+            return restTemplate.exchange(pispAccBalanceCheckUrl, HttpMethod.POST, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return balanceCheckResponse.getBody();
     }
 
-    public String createPayment(String token, String webApiKey, CreatePaymentRequest request) throws ExpiredTokenException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getProperty("pispCreatePaymentUrl"));
+    /**
+     * Calls PISP create payment API
+     *
+     * @param token     access token
+     * @param webApiKey webapi key to connect to webapi
+     * @param request   containing mandatory fields for create payment
+     * @return ResponseEntity with create payment in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> createPayment(String token, String webApiKey, CreatePaymentRequest request) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispCreatePaymentUrl"));
         String pispCreatePaymentUrl = builder.build().toString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
         HttpEntity<CreatePaymentRequest> entity = new HttpEntity<>(request, headers);
-        ResponseEntity<String> createPaymentResponse = restTemplate.exchange(pispCreatePaymentUrl, HttpMethod.POST, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(createPaymentResponse.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        try {
+            return restTemplate.exchange(pispCreatePaymentUrl, HttpMethod.POST, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return createPaymentResponse.getBody();
     }
 
-    public String getApiAuthorization(String token, String webApiKey, String signId) throws ExpiredTokenException {
-        String pispApiAuthUrl = createApiAuthorizationUrl(signId);
+    /**
+     * Calls PISP detail of the authorization API
+     *
+     * @param token     access token
+     * @param webApiKey webapi key to connect to webapi
+     * @param signId    of created payment
+     * @return ResponseEntity with detail of the authorization in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> getApiAuthorization(String token, String webApiKey, String signId) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispApiAuthUrl"));
+        String pispApiAuthUrl = builder.buildAndExpand(signId).toString();
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
-        HttpEntity<Object> entity = new HttpEntity(headers);
-        ResponseEntity<String> apiAuthorization = restTemplate.exchange(pispApiAuthUrl, HttpMethod.GET, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(apiAuthorization.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        HttpEntity<Object> entity = new HttpEntity<>(headers);
+        try {
+            return restTemplate.exchange(pispApiAuthUrl, HttpMethod.GET, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return apiAuthorization.getBody();
     }
 
-    public String startApiAuthorization(String token, String webApiKey, String signId, StartApiAuthorizationRequest request) throws ExpiredTokenException {
-        String pispApiAuthUrl = createApiAuthorizationUrl(signId);
+    /**
+     * Calls PISP initiation of payment authorization API
+     *
+     * @param token     access token
+     * @param webApiKey webapi key to connect to webapi
+     * @param signId    of created payment
+     * @param request   containing mandatory fields for initiation of payment authorization
+     * @return ResponseEntity with initiation of payment authorization in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> startApiAuthorization(String token, String webApiKey, String signId, StartApiAuthorizationRequest request) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispApiAuthUrl"));
+        String pispApiAuthUrl = builder.buildAndExpand(signId).toString();
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
-        HttpEntity<Object> entity = new HttpEntity(request, headers);
-        ResponseEntity<String> apiAuthorization = restTemplate.exchange(pispApiAuthUrl, HttpMethod.POST, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(apiAuthorization.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        HttpEntity<Object> entity = new HttpEntity<>(request, headers);
+        try {
+            return restTemplate.exchange(pispApiAuthUrl, HttpMethod.POST, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return apiAuthorization.getBody();
     }
 
-    public String finishApiAuthorization(String token, String webApiKey, String signId, FinishApiAuthorizationRequest request) throws ExpiredTokenException {
-        String pispApiAuthUrl = createApiAuthorizationUrl(signId);
+    /**
+     * Calls PISP payment authorization finalization API
+     *
+     * @param token     access token
+     * @param webApiKey webapi key to connect to webapi
+     * @param signId    of created payment
+     * @param request   containing mandatory fields for payment authorization finalization
+     * @return ResponseEntity with payment authorization finalization in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> finishApiAuthorization(String token, String webApiKey, String signId, FinishApiAuthorizationRequest request) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispApiAuthUrl"));
+        String pispApiAuthUrl = builder.buildAndExpand(signId).toString();
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
-        HttpEntity<Object> entity = new HttpEntity(request, headers);
-        ResponseEntity<String> apiAuthorization = restTemplate.exchange(pispApiAuthUrl, HttpMethod.PUT, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(apiAuthorization.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        HttpEntity<Object> entity = new HttpEntity<>(request, headers);
+        try {
+            return restTemplate.exchange(pispApiAuthUrl, HttpMethod.PUT, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return apiAuthorization.getBody();
     }
 
-    public String getFederatedAuthorization(String token, String webApiKey, String callbackUri, String signId, String hash) throws ExpiredTokenException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getProperty("pispFederatedAuthUrl"));
+    /**
+     * Calls PISP obtain authorization url for federated authorization API
+     *
+     * @param token       access token
+     * @param webApiKey   webapi key to connect to webapi
+     * @param callbackUri URL for redirection by CSAS after successful payment authorization
+     * @param signId      of created payment
+     * @param hash        of created payment
+     * @return ResponseEntity with obtain authorization url for federated authorization in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> getFederatedAuthorization(String token, String webApiKey, String callbackUri, String signId, String hash) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispFederatedAuthUrl"));
         String pispFederatedAuthUrl = builder.buildAndExpand(signId, hash).toString();
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
         headers.add("Callback-Uri", callbackUri);
-        HttpEntity<Object> entity = new HttpEntity(headers);
-        ResponseEntity<String> federatedAuthorization = restTemplate.exchange(pispFederatedAuthUrl, HttpMethod.GET, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(federatedAuthorization.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        HttpEntity<Object> entity = new HttpEntity<>(headers);
+        try {
+            return restTemplate.exchange(pispFederatedAuthUrl, HttpMethod.GET, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return federatedAuthorization.getBody();
     }
 
-    public String pollAuthorizationState(String token, String webApiKey, String pollId) throws ExpiredTokenException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getProperty("pispPollAuthUrl"));
+    /**
+     * Calls PISP poll authorization state API
+     *
+     * @param token     access token
+     * @param webApiKey webapi key to connect to webapi
+     * @param pollId    of authorization
+     * @return ResponseEntity with poll authorization state in body
+     * @throws ExpiredAccessTokenException if access token is expired
+     */
+    public ResponseEntity<Object> pollAuthorizationState(String token, String webApiKey, String pollId) throws ExpiredAccessTokenException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getRequiredProperty("pispPollAuthUrl"));
         String pispPollAuthUrl = builder.buildAndExpand(pollId).toString();
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + token);
         headers.add("web-api-key", webApiKey);
-        HttpEntity<Object> entity = new HttpEntity(headers);
-        ResponseEntity<String> pollAuthorizationState = restTemplate.exchange(pispPollAuthUrl, HttpMethod.GET, entity, String.class);
-        if (HttpStatus.UNAUTHORIZED.equals(pollAuthorizationState.getStatusCode())) {
-            throw new ExpiredTokenException("Token has expired.");
+        HttpEntity<Object> entity = new HttpEntity<>(headers);
+        try {
+            return restTemplate.exchange(pispPollAuthUrl, HttpMethod.GET, entity, Object.class);
+        } catch (HttpClientErrorException ex) {
+            if (HttpStatus.FORBIDDEN.equals(ex.getStatusCode())) {
+                throw new ExpiredAccessTokenException("Token has expired.");
+            } else {
+                throw ex;
+            }
         }
-        return pollAuthorizationState.getBody();
-    }
-
-    private String createApiAuthorizationUrl(String signId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(environment.getProperty("pispApiAuthUrl"));
-        return builder.buildAndExpand(signId).toString();
     }
 }

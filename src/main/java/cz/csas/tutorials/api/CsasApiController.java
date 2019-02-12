@@ -1,9 +1,9 @@
 package cz.csas.tutorials.api;
 
 import cz.csas.tutorials.api.model.ExchangeCodeForTokenException;
-import cz.csas.tutorials.api.model.ExpiredTokenException;
-import cz.csas.tutorials.api.model.GetCodeException;
-import cz.csas.tutorials.api.model.RefreshAccessTokenException;
+import cz.csas.tutorials.api.model.ExpiredAccessTokenException;
+import cz.csas.tutorials.api.model.ExpiredRefreshTokenException;
+import cz.csas.tutorials.api.model.StateNotFoundException;
 import cz.csas.tutorials.api.model.TokenResponse;
 import cz.csas.tutorials.api.model.balance.BalanceCheckRequest;
 import cz.csas.tutorials.api.model.payments.CreatePaymentRequest;
@@ -14,16 +14,15 @@ import cz.csas.tutorials.api.services.PispService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.net.MalformedURLException;
 
 /**
  * Controller class calls all PISP endpoints. All authorization calls are served in authService.
@@ -32,16 +31,16 @@ import java.net.MalformedURLException;
 @Slf4j
 public class CsasApiController {
 
-    @Value("${redirectUri}")
-    private String redirectUri;
+    @Value("${authorizationRedirectUri}")
+    private String authorizationRedirectUri;
     @Value("${webApiKey}")
     private String webApiKey;
     @Value("${clientId}")
     private String clientId;
     @Value("${clientSecret}")
     private String clientSecret;
-    @Value("${callbackUri}")
-    private String callbackUri;
+    @Value("${signedPaymentCallbackUri}")
+    private String signedPaymentCallbackUri;
     private String accessToken = null;
     private String refreshToken = null;
 
@@ -55,37 +54,64 @@ public class CsasApiController {
     }
 
     /**
+     * Builds url that is used for user authorization.
+     *
+     * @return url for user authorization
+     */
+    @GetMapping("/auth/authUrl")
+    public ResponseEntity getAuthorizationUrl() {
+        String authorizationUrl = authService.getAuthorizationUrl(authorizationRedirectUri, clientId);
+        return ResponseEntity.ok(authorizationUrl);
+    }
+
+    /**
+     * CSAS IDP redirect user to this endpoint after successful authorization. Application exchange received code for for access and refresh tokens.
+     *
+     * @param code  received from CSAS
+     * @param state received from CSAS
+     * @return message for user
+     * @throws StateNotFoundException        if received state is not the one we sent to CSAS.
+     * @throws ExchangeCodeForTokenException if anything bad happens during exchanging code.
+     */
+    @GetMapping("/auth/callback")
+    public ResponseEntity obtainTokens(@RequestParam String code,
+                                       @RequestParam String state) throws StateNotFoundException, ExchangeCodeForTokenException {
+        TokenResponse tokens = authService.obtainTokens(code, state);
+        accessToken = tokens.getAccessToken();
+        refreshToken = tokens.getRefreshToken();
+        return ResponseEntity.ok("Code has been changed for tokens. Application is now ready to serve PISP API calls.");
+    }
+
+    /**
      * Calls PISP accounts endpoint /my/accounts, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
      * @param page  number for paging (paging and sorting works only in production, not sandbox environment)
      * @param size  of page
      * @param sort  for results sorting
      * @param order asc/desc
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @GetMapping("/pispAccounts")
-    public String getAccounts(@RequestParam(defaultValue = "0") String page,
-                              @RequestParam(defaultValue = "1") String size,
-                              @RequestParam(required = false) String sort,
-                              @RequestParam(required = false) String order) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String accounts = null;
+    @GetMapping("/pisp/accounts")
+    public ResponseEntity<Object> getAccounts(@RequestParam(defaultValue = "0") String page,
+                                              @RequestParam(defaultValue = "1") String size,
+                                              @RequestParam(required = false) String sort,
+                                              @RequestParam(required = false) String order) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> accounts = null;
         try {
             accounts = pispService.getAccounts(accessToken, webApiKey, page, size, sort, order);
-            log.debug("Calling PISP accounts endpoint. Response = " + accounts);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP accounts endpoint. Response = " + accounts);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                accounts = pispService.getAccounts(accessToken, webApiKey, page, size, sort, order);
-                log.debug("Calling PISP accounts endpoint with new access token. Response = " + accounts);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            accounts = pispService.getAccounts(accessToken, webApiKey, page, size, sort, order);
+            log.debug("Called PISP accounts endpoint with new access token. Response = " + accounts);
         }
 
         return accounts;
@@ -95,28 +121,26 @@ public class CsasApiController {
      * Calls PISP balance check endpoint /my/payments/balanceCheck, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
      * @param request in JSON form
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @PostMapping("/pispBalanceCheck")
-    public String balanceCheck(@RequestBody BalanceCheckRequest request) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String balanceCheck = null;
+    @PostMapping("/pisp/balanceCheck")
+    public ResponseEntity<Object> balanceCheck(@RequestBody BalanceCheckRequest request) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> balanceCheck = null;
         try {
             balanceCheck = pispService.balanceCheck(accessToken, webApiKey, request);
-            log.debug("Calling PISP balance check endpoint. Response = " + balanceCheck);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP balance check endpoint. Response = " + balanceCheck);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                balanceCheck = pispService.balanceCheck(accessToken, webApiKey, request);
-                log.debug("Calling PISP balance check endpoint with new access token. Response = " + balanceCheck);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            balanceCheck = pispService.balanceCheck(accessToken, webApiKey, request);
+            log.debug("Called PISP balance check endpoint with new access token. Response = " + balanceCheck);
         }
 
         return balanceCheck;
@@ -126,28 +150,26 @@ public class CsasApiController {
      * Calls PISP create payment endpoint /my/payments, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
      * @param request in JSON form
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @PostMapping("/pispCreatePayment")
-    public String createPayment(@RequestBody CreatePaymentRequest request) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String createdPayment = null;
+    @PostMapping("/pisp/createPayment")
+    public ResponseEntity<Object> createPayment(@RequestBody CreatePaymentRequest request) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> createdPayment = null;
         try {
             createdPayment = pispService.createPayment(accessToken, webApiKey, request);
-            log.debug("Calling PISP create payment endpoint. Response = " + createdPayment);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP create payment endpoint. Response = " + createdPayment);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                createdPayment = pispService.createPayment(accessToken, webApiKey, request);
-                log.debug("Calling PISP create payment endpoint with new access token. Response = " + createdPayment);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            createdPayment = pispService.createPayment(accessToken, webApiKey, request);
+            log.debug("Called PISP create payment endpoint with new access token. Response = " + createdPayment);
         }
 
         return createdPayment;
@@ -157,28 +179,26 @@ public class CsasApiController {
      * Calls PISP detail of the authorization endpoint /my/payments/sign/{signId}, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
      * @param signId of payment, received in createPayment response
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @GetMapping("/pispApiAuth/{signId}")
-    public String getApiAuthorization(@PathVariable String signId) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String apiAuth = null;
+    @GetMapping("/pisp/apiAuth/{signId}")
+    public ResponseEntity<Object> getApiAuthorization(@PathVariable String signId) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> apiAuth = null;
         try {
             apiAuth = pispService.getApiAuthorization(accessToken, webApiKey, signId);
-            log.debug("Calling PISP get API authorization endpoint. Response = " + apiAuth);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP get API authorization endpoint. Response = " + apiAuth);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                apiAuth = pispService.getApiAuthorization(accessToken, webApiKey, signId);
-                log.debug("Calling PISP get API authorization endpoint with new access token. Response = " + apiAuth);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            apiAuth = pispService.getApiAuthorization(accessToken, webApiKey, signId);
+            log.debug("Called PISP get API authorization endpoint with new access token. Response = " + apiAuth);
         }
 
         return apiAuth;
@@ -187,31 +207,29 @@ public class CsasApiController {
     /**
      * Calls PISP initiation of payment authorization endpoint /my/payments/sign/{signId}, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
-     * @param signId of payment, received in createPayment response
+     * @param signId  of payment, received in createPayment response
      * @param request in JSON form with selected authorization type
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @PostMapping("/pispApiAuth/{signId}")
-    public String startApiAuthorization(@PathVariable String signId,
-                                        @RequestBody StartApiAuthorizationRequest request) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String apiAuth = null;
+    @PostMapping("/pisp/apiAuth/{signId}")
+    public ResponseEntity<Object> startApiAuthorization(@PathVariable String signId,
+                                                        @RequestBody StartApiAuthorizationRequest request) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> apiAuth = null;
         try {
             apiAuth = pispService.startApiAuthorization(accessToken, webApiKey, signId, request);
-            log.debug("Calling PISP start API authorization endpoint. Response = " + apiAuth);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP start API authorization endpoint. Response = " + apiAuth);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                apiAuth = pispService.startApiAuthorization(accessToken, webApiKey, signId, request);
-                log.debug("Calling PISP start API authorization endpoint with new access token. Response = " + apiAuth);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            apiAuth = pispService.startApiAuthorization(accessToken, webApiKey, signId, request);
+            log.debug("Called PISP start API authorization endpoint with new access token. Response = " + apiAuth);
         }
 
         return apiAuth;
@@ -220,31 +238,29 @@ public class CsasApiController {
     /**
      * Calls PISP payment authorization finalization endpoint /my/payments/sign/{signId}, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
-     * @param signId of payment, received in createPayment response
+     * @param signId  of payment, received in createPayment response
      * @param request in JSON form with selected authorization type and oneTimePassword
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @PutMapping("/pispApiAuth/{signId}")
-    public String finishApiAuthorization(@PathVariable String signId,
-                                         @RequestBody FinishApiAuthorizationRequest request) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String apiAuth = null;
+    @PutMapping("/pisp/apiAuth/{signId}")
+    public ResponseEntity<Object> finishApiAuthorization(@PathVariable String signId,
+                                                         @RequestBody FinishApiAuthorizationRequest request) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> apiAuth = null;
         try {
             apiAuth = pispService.finishApiAuthorization(accessToken, webApiKey, signId, request);
-            log.debug("Calling PISP finish API authorization endpoint. Response = " + apiAuth);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP finish API authorization endpoint. Response = " + apiAuth);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                apiAuth = pispService.finishApiAuthorization(accessToken, webApiKey, signId, request);
-                log.debug("Calling PISP finish API authorization endpoint with new access token. Response = " + apiAuth);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            apiAuth = pispService.finishApiAuthorization(accessToken, webApiKey, signId, request);
+            log.debug("Called PISP finish API authorization endpoint with new access token. Response = " + apiAuth);
         }
 
         return apiAuth;
@@ -254,30 +270,28 @@ public class CsasApiController {
      * Calls PISP obtain authorization URL endpoint /my/payments/federate/sign/{signId}/hash/{hash}, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
      * @param signId of payment, received in createPayment response
-     * @param hash of payment, received in createPayment response
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @param hash   of payment, received in createPayment response
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @GetMapping("/pispFederatedAuth/{signId}/hash/{hash}")
-    public String getFederatedAuthorization(@PathVariable String signId,
-                                            @PathVariable String hash) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String federatedAuth = null;
+    @GetMapping("/pisp/federatedAuth/{signId}/hash/{hash}")
+    public ResponseEntity<Object> getFederatedAuthorization(@PathVariable String signId,
+                                                            @PathVariable String hash) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> federatedAuth = null;
         try {
-            federatedAuth = pispService.getFederatedAuthorization(accessToken, webApiKey, callbackUri, signId, hash);
-            log.debug("Calling PISP get federated authorization endpoint. Response = " + federatedAuth);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            federatedAuth = pispService.getFederatedAuthorization(accessToken, webApiKey, signedPaymentCallbackUri, signId, hash);
+            log.debug("Called PISP get federated authorization endpoint. Response = " + federatedAuth);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                federatedAuth = pispService.getFederatedAuthorization(accessToken, webApiKey, callbackUri, signId, hash);
-                log.debug("Calling PISP get federated authorization endpoint with new access token. Response = " + federatedAuth);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            federatedAuth = pispService.getFederatedAuthorization(accessToken, webApiKey, signedPaymentCallbackUri, signId, hash);
+            log.debug("Called PISP get federated authorization endpoint with new access token. Response = " + federatedAuth);
         }
 
         return federatedAuth;
@@ -287,38 +301,28 @@ public class CsasApiController {
      * Calls PISP poll authorization state endpoint /my/payments/sign/poll/{pollId}, see docs https://developers.erstegroup.com/docs/apis/bank.csas/v1/payment-initiation
      *
      * @param pollId received in federatedAuth response
-     * @return JSON response in String form (object is not returned on purpose)
-     * @throws MalformedURLException if redirectUri is not correct URI
+     * @return JSON response
+     * @throws ExpiredAccessTokenException if new access token is rejected by CSAS IDP.
      */
-    @GetMapping("/pispPollAuthorization/{pollId}")
-    public String pollAuthorizationState(@PathVariable String pollId) throws MalformedURLException, RefreshAccessTokenException,
-            GetCodeException, ExchangeCodeForTokenException {
-        checkAccessToken();
-        String pollAuthorizationState = null;
+    @GetMapping("/pisp/pollAuthorization/{pollId}")
+    public ResponseEntity<Object> pollAuthorizationState(@PathVariable String pollId) throws ExpiredAccessTokenException {
+        ResponseEntity<Object> pollAuthorizationState = null;
         try {
             pollAuthorizationState = pispService.pollAuthorizationState(accessToken, webApiKey, pollId);
-            log.debug("Calling PISP poll authorization state endpoint. Response = " + pollAuthorizationState);
-        } catch (ExpiredTokenException e) {
-            accessToken = authService.refreshAccessToken(refreshToken, clientId, clientSecret);
+            log.debug("Called PISP poll authorization state endpoint. Response = " + pollAuthorizationState);
+        } catch (ExpiredAccessTokenException e) {
             log.debug("Refreshing access token with refresh token = " + refreshToken); // Do not log token in production!
-            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
             try {
-                pollAuthorizationState = pispService.pollAuthorizationState(accessToken, webApiKey, pollId);
-                log.debug("Calling PISP poll authorization state endpoint with new access token. Response = " + pollAuthorizationState);
-            } catch (ExpiredTokenException e1) {
-                log.error("Error when trying to refresh access token");
-                throw new RefreshAccessTokenException("Error when trying to refresh access token");
+                accessToken = authService.getNewAccessToken(refreshToken, clientId, clientSecret);
+            } catch (ExpiredRefreshTokenException e1) {
+                log.debug("Refresh token has expired. Client has to be authorized.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token has expired. Client has to be authorized.");
             }
+            log.debug("Obtained new access token = " + accessToken); // Do not log token in production!
+            pollAuthorizationState = pispService.pollAuthorizationState(accessToken, webApiKey, pollId);
+            log.debug("Called PISP poll authorization endpoint with new access token. Response = " + pollAuthorizationState);
         }
 
         return pollAuthorizationState;
-    }
-
-    private void checkAccessToken() throws MalformedURLException, GetCodeException, ExchangeCodeForTokenException {
-        if (accessToken == null) {
-            TokenResponse tokenResponse = authService.getNewTokenResponse(redirectUri, clientId);
-            accessToken = tokenResponse.getAccessToken();
-            refreshToken = tokenResponse.getRefreshToken();
-        }
     }
 }
