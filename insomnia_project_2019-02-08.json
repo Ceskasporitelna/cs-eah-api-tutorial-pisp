@@ -1,7 +1,7 @@
 {
 	"_type": "export",
 	"__export_format": 3,
-	"__export_date": "2019-02-08T13:18:31.529Z",
+	"__export_date": "2019-02-14T11:57:38.591Z",
 	"__export_source": "insomnia.desktop.app:v6.3.2",
 	"resources": [
 		{
@@ -50,7 +50,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570414,
 			"method": "GET",
-			"modified": 1549631717894,
+			"modified": 1549973879709,
 			"name": "getAccounts",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -60,7 +60,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispAccounts",
+			"url": "http://localhost:8080/pisp/accounts",
 			"_type": "request"
 		},
 		{
@@ -87,7 +87,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570364,
 			"method": "POST",
-			"modified": 1549631715028,
+			"modified": 1549977134296,
 			"name": "balanceCheck",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -97,7 +97,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispBalanceCheck",
+			"url": "http://localhost:8080/pisp/balanceCheck",
 			"_type": "request"
 		},
 		{
@@ -124,7 +124,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570314,
 			"method": "POST",
-			"modified": 1549631711847,
+			"modified": 1549977142723,
 			"name": "createPayment",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -134,7 +134,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispCreatePayment",
+			"url": "http://localhost:8080/pisp/createPayment",
 			"_type": "request"
 		},
 		{
@@ -153,7 +153,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570264,
 			"method": "GET",
-			"modified": 1549631708428,
+			"modified": 1549977157292,
 			"name": "getApiAuthorization",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -163,7 +163,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispApiAuth/166609107206666",
+			"url": "http://localhost:8080/pisp/apiAuth/166609107206666",
 			"_type": "request"
 		},
 		{
@@ -190,7 +190,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570214,
 			"method": "POST",
-			"modified": 1549631705406,
+			"modified": 1549977167068,
 			"name": "startApiAuthorization",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -200,7 +200,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispApiAuth/166609107206666",
+			"url": "http://localhost:8080/pisp/apiAuth/166609107206666",
 			"_type": "request"
 		},
 		{
@@ -227,7 +227,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570164,
 			"method": "PUT",
-			"modified": 1549631702229,
+			"modified": 1549977176811,
 			"name": "finishApiAuthorization",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -237,7 +237,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispApiAuth/166609107206666",
+			"url": "http://localhost:8080/pisp/apiAuth/166609107206666",
 			"_type": "request"
 		},
 		{
@@ -256,7 +256,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570114,
 			"method": "GET",
-			"modified": 1549631697093,
+			"modified": 1549977186140,
 			"name": "getFederatedAuthorization",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -266,7 +266,7 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispFederatedAuth/166609107206666/hash/37b88d1e8ffa0258cdf617825ca460a46dbda8f6h2ed25a0d541485aec62c370",
+			"url": "http://localhost:8080/pisp/federatedAuth/166609107206666/hash/37b88d1e8ffa0258cdf617825ca460a46dbda8f6h2ed25a0d541485aec62c370",
 			"_type": "request"
 		},
 		{
@@ -285,7 +285,7 @@
 			"isPrivate": false,
 			"metaSortKey": -1549629570064,
 			"method": "GET",
-			"modified": 1549631736451,
+			"modified": 1549977199354,
 			"name": "pollAuthorizationState",
 			"parameters": [],
 			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
@@ -295,7 +295,30 @@
 			"settingRebuildPath": true,
 			"settingSendCookies": true,
 			"settingStoreCookies": true,
-			"url": "http://localhost:8080/pispPollAuthorization/166609107206666",
+			"url": "http://localhost:8080/pisp/pollAuthorization/166609107206666",
+			"_type": "request"
+		},
+		{
+			"_id": "req_0f595fed196b4b1b82f273eb40f82464",
+			"authentication": {},
+			"body": {},
+			"created": 1549961856077,
+			"description": "",
+			"headers": [],
+			"isPrivate": false,
+			"metaSortKey": -1549961856077,
+			"method": "GET",
+			"modified": 1549961960770,
+			"name": "getAuthorizationUrl",
+			"parameters": [],
+			"parentId": "wrk_2dff15dcbbc146649095ab98471f8d39",
+			"settingDisableRenderRequestBody": false,
+			"settingEncodeUrl": true,
+			"settingMaxTimelineDataSize": 1000,
+			"settingRebuildPath": true,
+			"settingSendCookies": true,
+			"settingStoreCookies": true,
+			"url": "http://localhost:8080/auth/authUrl",
 			"_type": "request"
 		}
 	]
