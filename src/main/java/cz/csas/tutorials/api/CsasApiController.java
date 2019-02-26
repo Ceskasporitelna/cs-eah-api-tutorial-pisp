@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -98,6 +99,12 @@ public class CsasApiController {
                                               @RequestParam(required = false) String sort,
                                               @RequestParam(required = false) String order) throws ExpiredAccessTokenException {
         ResponseEntity<Object> accounts = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             accounts = pispService.getAccounts(accessToken, webApiKey, page, size, sort, order);
             log.debug("Called PISP accounts endpoint. Response = " + accounts);
@@ -127,6 +134,12 @@ public class CsasApiController {
     @PostMapping("/pisp/balanceCheck")
     public ResponseEntity<Object> balanceCheck(@RequestBody BalanceCheckRequest request) throws ExpiredAccessTokenException {
         ResponseEntity<Object> balanceCheck = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             balanceCheck = pispService.balanceCheck(accessToken, webApiKey, request);
             log.debug("Called PISP balance check endpoint. Response = " + balanceCheck);
@@ -156,6 +169,12 @@ public class CsasApiController {
     @PostMapping("/pisp/createPayment")
     public ResponseEntity<Object> createPayment(@RequestBody CreatePaymentRequest request) throws ExpiredAccessTokenException {
         ResponseEntity<Object> createdPayment = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             createdPayment = pispService.createPayment(accessToken, webApiKey, request);
             log.debug("Called PISP create payment endpoint. Response = " + createdPayment);
@@ -185,6 +204,12 @@ public class CsasApiController {
     @GetMapping("/pisp/apiAuth/{signId}")
     public ResponseEntity<Object> getApiAuthorization(@PathVariable String signId) throws ExpiredAccessTokenException {
         ResponseEntity<Object> apiAuth = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             apiAuth = pispService.getApiAuthorization(accessToken, webApiKey, signId);
             log.debug("Called PISP get API authorization endpoint. Response = " + apiAuth);
@@ -216,6 +241,12 @@ public class CsasApiController {
     public ResponseEntity<Object> startApiAuthorization(@PathVariable String signId,
                                                         @RequestBody StartApiAuthorizationRequest request) throws ExpiredAccessTokenException {
         ResponseEntity<Object> apiAuth = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             apiAuth = pispService.startApiAuthorization(accessToken, webApiKey, signId, request);
             log.debug("Called PISP start API authorization endpoint. Response = " + apiAuth);
@@ -247,6 +278,12 @@ public class CsasApiController {
     public ResponseEntity<Object> finishApiAuthorization(@PathVariable String signId,
                                                          @RequestBody FinishApiAuthorizationRequest request) throws ExpiredAccessTokenException {
         ResponseEntity<Object> apiAuth = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             apiAuth = pispService.finishApiAuthorization(accessToken, webApiKey, signId, request);
             log.debug("Called PISP finish API authorization endpoint. Response = " + apiAuth);
@@ -278,6 +315,12 @@ public class CsasApiController {
     public ResponseEntity<Object> getFederatedAuthorization(@PathVariable String signId,
                                                             @PathVariable String hash) throws ExpiredAccessTokenException {
         ResponseEntity<Object> federatedAuth = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             federatedAuth = pispService.getFederatedAuthorization(accessToken, webApiKey, signedPaymentCallbackUri, signId, hash);
             log.debug("Called PISP get federated authorization endpoint. Response = " + federatedAuth);
@@ -307,6 +350,12 @@ public class CsasApiController {
     @GetMapping("/pisp/pollAuthorization/{pollId}")
     public ResponseEntity<Object> pollAuthorizationState(@PathVariable String pollId) throws ExpiredAccessTokenException {
         ResponseEntity<Object> pollAuthorizationState = null;
+        if (StringUtils.isEmpty(accessToken)) {
+            log.debug("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
+        }
         try {
             pollAuthorizationState = pispService.pollAuthorizationState(accessToken, webApiKey, pollId);
             log.debug("Called PISP poll authorization state endpoint. Response = " + pollAuthorizationState);
