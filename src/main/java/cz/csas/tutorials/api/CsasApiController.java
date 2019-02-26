@@ -101,7 +101,9 @@ public class CsasApiController {
         ResponseEntity<Object> accounts = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             accounts = pispService.getAccounts(accessToken, webApiKey, page, size, sort, order);
@@ -134,7 +136,9 @@ public class CsasApiController {
         ResponseEntity<Object> balanceCheck = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             balanceCheck = pispService.balanceCheck(accessToken, webApiKey, request);
@@ -167,7 +171,9 @@ public class CsasApiController {
         ResponseEntity<Object> createdPayment = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             createdPayment = pispService.createPayment(accessToken, webApiKey, request);
@@ -200,7 +206,9 @@ public class CsasApiController {
         ResponseEntity<Object> apiAuth = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             apiAuth = pispService.getApiAuthorization(accessToken, webApiKey, signId);
@@ -235,7 +243,9 @@ public class CsasApiController {
         ResponseEntity<Object> apiAuth = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             apiAuth = pispService.startApiAuthorization(accessToken, webApiKey, signId, request);
@@ -270,7 +280,9 @@ public class CsasApiController {
         ResponseEntity<Object> apiAuth = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             apiAuth = pispService.finishApiAuthorization(accessToken, webApiKey, signId, request);
@@ -305,7 +317,9 @@ public class CsasApiController {
         ResponseEntity<Object> federatedAuth = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             federatedAuth = pispService.getFederatedAuthorization(accessToken, webApiKey, signedPaymentCallbackUri, signId, hash);
@@ -338,7 +352,9 @@ public class CsasApiController {
         ResponseEntity<Object> pollAuthorizationState = null;
         if (StringUtils.isEmpty(accessToken)) {
             log.debug("Client has to be authorized.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Client has to be authorized.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("WWW-Authenticate", "Bearer")
+                    .body("Client has to be authorized.");
         }
         try {
             pollAuthorizationState = pispService.pollAuthorizationState(accessToken, webApiKey, pollId);
