@@ -1,7 +1,7 @@
 Tutorial - how to connect to CSAS PISP API
 =====================================
 Java skeleton web-based application for connection to CSAS.
-For more information visit: URL
+For more information visit: https://developers.erstegroup.com/docs/guides/csas-tutorials-initiate-payment
 
 This is a Java 8, spring-boot project. To run the app execute:
 
